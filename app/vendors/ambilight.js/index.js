@@ -54,7 +54,7 @@ class AmbilightContainer {
             color = source;
         }
         if (source instanceof HTMLVideoElement) {
-            color = getColorFromVideo(source);  
+            color = getColorFromVideo(source);
         }
         this.setColor(color);
     }

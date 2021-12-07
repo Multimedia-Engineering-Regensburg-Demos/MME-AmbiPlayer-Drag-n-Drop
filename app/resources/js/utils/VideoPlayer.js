@@ -10,24 +10,29 @@ function initPlayer(player) {
 
 function initControls(player) {
     player.controls = {
+        uploadEl: player.el.querySelector(".upload"),
         seekbarEl: player.el.querySelector(".seekbar"),
         playButton: player.el.querySelector(".button.play"),
         stopButton: player.el.querySelector(".button.stop"),
+        uploadButton: player.el.querySelector(".button.file"),
         timeLabel: player.el.querySelector(".label.time"),
     };
 }
 
 function initEvents(player) {
+    player.controls.uploadEl.addEventListener("change", player.onVideoFileSelected
+        .bind(player));
     player.controls.seekbarEl.addEventListener("change", player.onSeekbarChanged.bind(
         player));
     player.controls.playButton.addEventListener("click", player.onPlayButtonClicked
         .bind(player));
     player.controls.stopButton.addEventListener("click", player.onStopButtonClicked
         .bind(player));
+    player.controls.uploadButton.addEventListener("click", player.onFileButtonClicked
+        .bind(player));
     player.playerEl.addEventListener("timeupdate", player.onVideoTimeChanged.bind(
         player));
     player.playerEl.addEventListener("ended", player.onVideoEnded.bind(player));
-    player.playerEl.addEventListener("canplay", player.onLoadEnd.bind(player));
 }
 
 function syncVideoTime(player) {
@@ -83,8 +88,16 @@ class VideoPlayer extends Observable {
     }
 
     setFile(file) {
-        let fileURL = file;
+        let fileURL = URL.createObjectURL(file);
         this.playerEl.src = fileURL;
+    }
+
+    onVideoFileSelected() {
+        let file = this.controls.uploadEl.files[0];
+        if (file && file.type === "video/mp4") {
+            this.setFile(file);
+            this.stop();
+        }
     }
 
     onSeekbarChanged() {
@@ -93,10 +106,8 @@ class VideoPlayer extends Observable {
     }
 
     onVideoTimeChanged() {
-        if(this.playerEl.paused === false) {
-            let event = new Event("videoFrameChanged", this.playerEl);
-            this.notifyAll(event);
-        }
+        let event = new Event("videoFrameChanged", this.playerEl);
+        this.notifyAll(event);
         syncSeekbar(this);
         syncTimeLabel(this);
     }
@@ -117,14 +128,10 @@ class VideoPlayer extends Observable {
         this.stop();
     }
 
-    onVideoFileSelected(file) {
-        this.setFile(file);
-        this.stop();
+    onFileButtonClicked() {
+        this.controls.uploadEl.click();
     }
 
-    onLoadEnd() {
-        syncSeekbar(this);
-    }
 }
 
 export default VideoPlayer;
