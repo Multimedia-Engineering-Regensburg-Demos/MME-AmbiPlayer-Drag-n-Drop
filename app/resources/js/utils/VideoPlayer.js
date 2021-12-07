@@ -27,6 +27,7 @@ function initEvents(player) {
     player.playerEl.addEventListener("timeupdate", player.onVideoTimeChanged.bind(
         player));
     player.playerEl.addEventListener("ended", player.onVideoEnded.bind(player));
+    player.playerEl.addEventListener("canplay", player.onLoadEnd.bind(player));
 }
 
 function syncVideoTime(player) {
@@ -78,6 +79,7 @@ class VideoPlayer extends Observable {
 
     stop() {
         this.pause();
+        this.playerEl.currentTime = 0;
     }
 
     setFile(file) {
@@ -120,6 +122,9 @@ class VideoPlayer extends Observable {
         this.stop();
     }
 
+    onLoadEnd() {
+        syncSeekbar(this);
+    }
 }
 
 export default VideoPlayer;
