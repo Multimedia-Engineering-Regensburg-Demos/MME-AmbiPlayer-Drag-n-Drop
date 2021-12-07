@@ -2,6 +2,8 @@
 
 import { Event, Observable } from "./Observable.js";
 
+var fileList = [];
+
 function initManager(manager) {
     initControls(manager);
     initEvents(manager);
@@ -17,7 +19,7 @@ function initControls(manager) {
 
 function initEvents(manager) {
     manager.controls.dropZone.addEventListener("dragover", onDragOver.bind(manager));
-    manager.controls.dropZone.addEventListener("drop", onVideoFileDropped.bind(manager));
+    manager.controls.dropZone.addEventListener("drop", onDrop.bind(manager));
 
     manager.controls.uploadEl.addEventListener("change", onVideoFileSelected.bind(manager));
     manager.controls.uploadButton.addEventListener("click", onFileButtonClicked.bind(manager));
@@ -27,11 +29,22 @@ function onDragOver(event) {
     event.preventDefault();
 }
 
-function onVideoFileDropped(event) {
+/** onDrop() gets called if a draggable object is dropped into the dropZone
+ *  Two possibilities:
+ *  (1) Load existing video from dropped preview-img
+ *  (2) Add new files to FileManager
+ */
+function onDrop(event) {
     event.preventDefault();
 
-    let file = event.dataTransfer.files[0];
-    onFileLoaded(file);
+    let menuId = event.dataTransfer.getData('text'),
+        files = event.dataTransfer.files;
+
+    if(menuId !== "") {
+        this.fileSelected(parseInt(menuId));
+    } else {
+        parseFiles.call(this, files);
+    }
 }
 
 function onFileButtonClicked() {
@@ -39,17 +52,49 @@ function onFileButtonClicked() {
 }
 
 function onVideoFileSelected() {
-    let file = this.controls.uploadEl.files[0];
-    onFileLoaded(file);
+    let files = this.controls.uploadEl.files;
+    parseFiles.call(this, files);
 }
 
-function onFileLoaded(file) {
-    if (file && file.type === "video/mp4") {
-        let fileId = this.addFile(file);
-        this.fileSelected(fileId);
+function parseFiles(files) {
+    let fileEntry = {},
+        fileId;
+    for (let i = 0; i < files.length; i++) {
+        if (files[i] && files[i].type === "video/mp4") {
+            fileEntry.vid = URL.createObjectURL(files[i]);
+            fileEntry.name = files[i].name;
+        } else if (files[i] && files[i].type === "image/jpeg"){
+            fileEntry.img = URL.createObjectURL(files[i]);
+        }
     }
+    
+    // Error handling
+    fileId = addFile.call(this, fileEntry);
+    this.fileSelected(fileId);
 }
 
+function addFile(file) {
+    let refFile = fileList.find(element => element.name === file.name),
+        event;
+
+    /** Checking if file is already added: 
+     *  Yes: Return present fileId
+     *  No: Add file and return new fileId
+     * */ 
+    if(refFile === undefined) {
+        file.fileId = Date.now();
+        fileList.push(file);
+
+        event = new Event("videoFileAdded", file);
+        this.notifyAll(event);
+        return file.fileId;
+    }
+    return refFile.fileId;
+}
+
+/** FileManager manages multiple ways (drag'n'drop & file-upload) 
+ *  to add video/img files to the application
+ */
 class FileManager extends Observable {
     constructor() {
         super();
@@ -57,14 +102,14 @@ class FileManager extends Observable {
         initManager(this);
     }
 
-    addFile(file) {
-        let fileId = Date.now();
-        this.files[fileId] = file;
-        return fileId;
-    }
-
+    /** Fires event to set new video in Videoplayer
+     *  Triggers if 
+     *  (1) new files are dragged into Videoplayer or 
+     *  (2) video-preview from fileMenu is dragged into Videoplayer
+     */
     fileSelected(id) {
-        let event = new Event("newFileSelected", this.files[id]);
+        let file = fileList.find(element => element.fileId === id),
+            event = new Event("newFileSelected", file);
         this.notifyAll(event);
     }
 }

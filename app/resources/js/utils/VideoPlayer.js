@@ -78,11 +78,10 @@ class VideoPlayer extends Observable {
 
     stop() {
         this.pause();
-        this.playerEl.currentTime = 0;
     }
 
     setFile(file) {
-        let fileURL = URL.createObjectURL(file);
+        let fileURL = file;
         this.playerEl.src = fileURL;
     }
 
@@ -92,8 +91,10 @@ class VideoPlayer extends Observable {
     }
 
     onVideoTimeChanged() {
-        let event = new Event("videoFrameChanged", this.playerEl);
-        this.notifyAll(event);
+        if(this.playerEl.paused === false) {
+            let event = new Event("videoFrameChanged", this.playerEl);
+            this.notifyAll(event);
+        }
         syncSeekbar(this);
         syncTimeLabel(this);
     }
